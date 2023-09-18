@@ -25,7 +25,7 @@ async fn main() -> Result<()> {
     let now = Instant::now();
 
     let mut query_tasks = Vec::new();
-    let num_requests = 10;
+    let num_requests = 2;
 
     for i in 1..num_requests {
         query_tasks.push(tokio::spawn(compute(i)));
@@ -43,7 +43,10 @@ async fn main() -> Result<()> {
 
 async fn compute(id: u16) -> Result<(), DataFusionError> {
     // create local session context
-    let ctx = SessionContext::new();
+    let config = SessionConfig::new();
+    let config = config.with_batch_size(2048);
+
+    let ctx = SessionContext::with_config(config);
     // register parquet file with the execution context
     ctx.register_parquet(
         "ph",
@@ -54,13 +57,15 @@ async fn compute(id: u16) -> Result<(), DataFusionError> {
 
     let load_all_data_query = "SELECT * from ph";
     let all_data = ctx.sql(load_all_data_query).await?;
+
+    let table_name = format!("pension_history_{}", id);
+
     let all_data = all_data.collect().await.unwrap();
 
     log::info!("Registered all data for task {}", id);
     let schema = all_data[0].schema(); // Assuming all batches have the same schema
 
     let table = MemTable::try_new(schema, vec![all_data])?;
-    let table_name = format!("pension_history_{}", id);
     ctx.register_table(&table_name, Arc::new(table))?;
 
     log::info!("Registered all data to memory for task {}", id);
