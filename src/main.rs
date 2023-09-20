@@ -21,7 +21,7 @@ async fn main() -> Result<()> {
     let now = Instant::now();
 
     let mut query_tasks = Vec::new();
-    let num_requests = 100;
+    let num_requests = 2;
 
     for i in 1..num_requests {
         query_tasks.push(tokio::spawn(compute(i)));
@@ -45,7 +45,7 @@ async fn compute(id: u16) -> Result<(), DataFusionError> {
     // register parquet file with the execution context
     ctx.register_parquet(
         "ph",
-        &format!("pensionHistory/{}/file.parquet", id),
+        &format!("pensionHistory2k/{}/file.parquet", id),
         ParquetReadOptions::default(),
     )
     .await?;
@@ -64,7 +64,7 @@ async fn compute(id: u16) -> Result<(), DataFusionError> {
     ctx.register_table(&table_name, Arc::new(table))?;
 
     log::info!("Registered all data to memory for task {}", id);
-    let filename = format!("pensionHistory/{}/results.json", id);
+    let filename = format!("pensionHistory2k/{}/results.json", id);
     let path = Path::new(&filename);
     let file = fs::File::create(path)?;
     let writer = json::LineDelimitedWriter::new(file);
